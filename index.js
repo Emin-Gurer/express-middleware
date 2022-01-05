@@ -3,6 +3,8 @@ const app = express();
 const PORT = 8080;
 const path = require('path');
 const morgan = require('morgan');
+const res = require('express/lib/response');
+const AppError = require('./AppError');
 
 /*
 in express everything is handled with middleware
@@ -44,7 +46,9 @@ const verifyPassword = (req, res, next) => {
   if (password === 'mysecret') {
     return next();
   }
+  throw new AppError('Password is required', 401);
   res.send('Your password is not correct.');
+  // throw new Error('Password is required');
 };
 app.get('/secret', verifyPassword, (req, res) => {
   res.send('Your password correct. Welcome to the secret page.');
@@ -60,9 +64,29 @@ app.get('/dogs', (req, res) => {
 app.get('/middleware', (req, res) => {
   res.send('Your path specific middleware log something to the console');
 });
+app.get('/error', (req, res) => {
+  chick.fly(); // Chick is not defined therefore this will throw an error, error handler middleware will be executed
+});
+app.get('/admin', (req, res) => {
+  //Throw 403 forbidden error
+  throw new AppError('You are not an admin', 403);
+});
 //fallback for 404
 app.use((req, res) => {
   res.status(404).send("This page doesn't exist");
+});
+
+//Error handling middlewares
+// app.use((err, req, res, next) => {
+//   console.log('This error middleware will run if there is an error');
+//   console.log(err);
+//   next(err); //if there is an argument in next express will treat it as an error middleware
+//   //last line passes the control to the express default error handler middleware
+// });
+
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message = 'Something went wrong' } = err;
+  res.status(statusCode).send(message);
 });
 //Start express app
 app.listen(PORT, () => {
